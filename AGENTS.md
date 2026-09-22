@@ -5,3 +5,7 @@
 - Commands: npx expo start, npx tsc --noEmit, npx expo install <pkg> (never npm install for Expo/RN packages — keeps versions pinned to the SDK).
 - API host per target: Android emulator 10.0.2.2:8000, iOS simulator localhost:8000, physical device via Expo Go <laptop-LAN-IP>:8000.
 - Git: the agent never runs git; the human commits and pushes. Commit messages, branch names, file names and code comments in English.
+- Auth tokens live only in `expo-secure-store` (Keychain/Keystore) — never in `AsyncStorage`.
+- No BFF: the mobile app calls the Laravel API directly with `Authorization: Bearer`, unlike the web app's BFF (Card 510) — intentional, not an oversight.
+- Every POST/PUT/PATCH must carry an `Idempotency-Key` header. The key is generated once per user action by the caller (not inside `apiFetch`) and reused on retries of that same action.
+- Read `error.code` to branch on API failures, never `error.message` (which is not localized or stable for UI logic).
