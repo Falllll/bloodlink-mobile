@@ -1,15 +1,21 @@
 import { useState } from 'react';
-import { Alert, Button, TextInput, View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { ApiFailure } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
+import { Button } from '@/components/ui/Button';
+import { Field } from '@/components/ui/Field';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { colors, spacing } from '@/theme/tokens';
 
 export default function LoginScreen() {
   const { signIn } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit() {
+    setSubmitting(true);
     try {
       await signIn(email, password);
     } catch (err) {
@@ -25,25 +31,29 @@ export default function LoginScreen() {
         return;
       }
       throw err;
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', padding: 24, gap: 12 }}>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        placeholder="Kata sandi"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title="Masuk" onPress={handleSubmit} />
+    <View style={{ flex: 1, justifyContent: 'center', padding: 24, backgroundColor: colors.base }}>
+      <GlassPanel style={{ padding: spacing.xl, gap: spacing.md }}>
+        <Field
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <Field
+          label="Kata sandi"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        <Button label="Masuk" onPress={handleSubmit} loading={submitting} />
+      </GlassPanel>
     </View>
   );
 }

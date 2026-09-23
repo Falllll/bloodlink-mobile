@@ -1,9 +1,12 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+
+import { AppText } from '@/components/ui/Text';
+import { colors } from '@/theme/tokens';
 
 export default function RequestsScreen() {
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text>Permintaan</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.base, paddingBottom: 84 }}>
+      <AppText variant="title">Permintaan</AppText>
     </View>
   );
 }
