@@ -13,6 +13,10 @@ export class ApiFailure extends Error {
   }
 }
 
+export class NetworkUnavailable extends Error {
+  constructor() { super('NETWORK_UNAVAILABLE'); }
+}
+
 export function setUnauthorizedHandler(handler: () => void): void {
   onUnauthorized = handler;
 }
@@ -35,7 +39,12 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     ...(init.headers as Record<string, string> | undefined),
   };
 
-  const res = await fetch(BASE + path, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(BASE + path, { ...init, headers });
+  } catch {
+    throw new NetworkUnavailable();
+  }
 
   if (res.status === 401) {
     await clearToken();
