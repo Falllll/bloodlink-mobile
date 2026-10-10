@@ -33,7 +33,17 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "BloodLink memakai lokasi Anda untuk mencari permintaan darah terdekat.",
+          "locationAlwaysAndWhenInUsePermission": "BloodLink memakai lokasi Anda untuk mencari permintaan darah terdekat, termasuk saat app tidak dibuka.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

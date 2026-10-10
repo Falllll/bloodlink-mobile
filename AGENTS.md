@@ -7,6 +7,7 @@
 - Git: the agent never runs git; the human commits and pushes. Commit messages, branch names, file names and code comments in English.
 - Auth tokens live only in `expo-secure-store` (Keychain/Keystore) — never in `AsyncStorage`.
 - The GET cache and the mutation retry queue live in `expo-sqlite/kv-store` under the key prefix `bl:`; `@react-native-async-storage/async-storage` is not used at all.
+- Location: feature screens read location only through `useDonorLocation()`; never call `expo-location` directly. Default accuracy is `Accuracy.Balanced`, `getLastKnownPositionAsync` is tried before `getCurrentPositionAsync`, and `watchPositionAsync` is not used. Background updates require a development build (not Expo Go) and stay off until a consumer exists.
 - No BFF: the mobile app calls the Laravel API directly with `Authorization: Bearer`, unlike the web app's BFF (Card 510) — intentional, not an oversight.
 - Every POST/PUT/PATCH must carry an `Idempotency-Key` header. The key is generated once per user action by the caller (not inside `apiFetch`) and reused on retries of that same action.
 - Read `error.code` to branch on API failures, never `error.message` (which is not localized or stable for UI logic).

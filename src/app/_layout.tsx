@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { OfflineProvider } from '@/lib/api/offline';
 import { SessionProvider, useSession } from '@/lib/auth/session';
+import '@/lib/location/task'; // side-effect import: registers the background location task at module scope
 import { useAppFonts } from '@/theme/typography';
 import { colors, spacing } from '@/theme/tokens';
 
