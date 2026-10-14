@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { apiFetch, newIdempotencyKey, setUnauthorizedHandler } from '@/lib/api/client';
 import type { ApiSuccess, AuthToken } from '@/lib/api/types';
 import { clearToken, readToken, writeToken } from '@/lib/auth/token';
+import { clearDonorCache } from '@/lib/donor/cache';
 
 type SessionStatus = 'loading' | 'signed-in' | 'signed-out';
 
@@ -43,6 +44,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
+    await clearDonorCache();
     await clearToken();
     setStatus('signed-out');
   }
