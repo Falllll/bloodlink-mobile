@@ -8,9 +8,11 @@
     "scheme": "bloodlinkmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.bloodlink.mobile",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.bloodlink.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,7 +45,8 @@
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { AppText } from '@/components/ui/Text';
 import { NetworkUnavailable } from '@/lib/api/client';
 import { useSession } from '@/lib/auth/session';
+import { useDevicePush } from '@/lib/devices/useDevicePush';
 import { formatBloodType, formatDateOnly, formatDateTime, formatVolume } from '@/lib/donor/format';
 import type { Donation, DonorProfile, Sex } from '@/lib/donor/types';
 import { useDonationHistory } from '@/lib/donor/useDonationHistory';
@@ -71,6 +72,8 @@ export default function ProfileScreen(): React.ReactElement {
       ) : null}
 
       {status === 'not-linked' ? null : <HistoryCard history={history} />}
+
+      <NotificationCard />
 
       <Button label="Keluar" variant="destructive" onPress={handleSignOut} loading={leaving} />
     </ScrollView>
@@ -163,6 +166,79 @@ function DonationRow({ donation }: { donation: Donation }): React.ReactElement {
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingVertical: spacing.xs }}>
       <AppText>{formatDateTime(donation.completed_at)}</AppText>
       <AppText variant="numeric" tone="strong">{formatVolume(donation.volume_ml)}</AppText>
+    </View>
+  );
+}
+
+function NotificationCard(): React.ReactElement {
+  const { enrollment, enable } = useDevicePush();
+  const [busy, setBusy] = useState(false);
+
+  // The permission prompt only ever comes from this button press, never on mount.
+  async function handleEnable() {
+    setBusy(true);
+    try {
+      await enable();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  let body: React.ReactElement;
+  if (enrollment.state === 'unsupported') {
+    body = (
+      <AppText tone="muted" testID="notifications-unsupported">
+        Perangkat ini tidak mendukung notifikasi push (emulator, simulator, atau Expo Go).
+      </AppText>
+    );
+  } else if (enrollment.state === 'granted' && enrollment.registered) {
+    body = (
+      <AppText testID="notifications-registered" style={{ color: colors.brandText }}>
+        Notifikasi aktif. Panggilan donor darurat akan dikirim ke perangkat ini.
+      </AppText>
+    );
+  } else if (enrollment.state === 'denied' && !enrollment.canAskAgain) {
+    // The OS will not show the prompt again; a retry button here would do nothing.
+    body = (
+      <>
+        <AppText tone="muted" testID="notifications-blocked">
+          Izin notifikasi ditolak. Aktifkan lewat pengaturan perangkat untuk menerima panggilan donor darurat.
+        </AppText>
+        <Button variant="ghost" label="Buka pengaturan" onPress={() => Linking.openSettings()} />
+      </>
+    );
+  } else if (enrollment.state === 'denied') {
+    body = (
+      <>
+        <AppText tone="muted" testID="notifications-denied">
+          Izin notifikasi belum diberikan. Tanpa izin ini, panggilan donor darurat tidak akan sampai.
+        </AppText>
+        <Button label="Coba lagi" onPress={handleEnable} loading={busy} />
+      </>
+    );
+  } else if (enrollment.state === 'granted') {
+    body = (
+      <>
+        <AppText tone="muted" testID="notifications-unregistered">
+          Izin sudah diberikan, tetapi perangkat ini belum terdaftar.
+        </AppText>
+        <Button label="Daftarkan perangkat" onPress={handleEnable} loading={busy} />
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <AppText tone="muted" testID="notifications-off">
+          Terima panggilan donor darurat di dekatmu lewat notifikasi.
+        </AppText>
+        <Button label="Aktifkan notifikasi" onPress={handleEnable} loading={busy} />
+      </>
+    );
+  }
+
+  return (
+    <View testID="profile-notifications">
+      <Card title="Notifikasi">{body}</Card>
     </View>
   );
 }

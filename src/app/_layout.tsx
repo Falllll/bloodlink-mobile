@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +8,9 @@ import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { OfflineProvider } from '@/lib/api/offline';
 import { SessionProvider, useSession } from '@/lib/auth/session';
 import '@/lib/location/task'; // side-effect import: registers the background location task at module scope
+// Also a side-effect import: the notification handler and token-rotation listener are set at module
+// scope, because the OS can wake the bundle for an incoming notification without rendering any view.
+import { onNotificationTap } from '@/lib/devices/handler';
 import { useAppFonts } from '@/theme/typography';
 import { colors, spacing } from '@/theme/tokens';
 
@@ -23,6 +26,9 @@ function RootNavigator() {
   useEffect(() => {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
+
+  // Tapping a notification lands on the home tab; the real destination waits for cards 610/620.
+  useEffect(() => onNotificationTap(() => router.replace('/')), []);
 
   if (!ready) return null; // splash is still up — never renders system-font text
 

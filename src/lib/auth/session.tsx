@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { apiFetch, newIdempotencyKey, setUnauthorizedHandler } from '@/lib/api/client';
 import type { ApiSuccess, AuthToken } from '@/lib/api/types';
 import { clearToken, readToken, writeToken } from '@/lib/auth/token';
+import { revokeDevice } from '@/lib/devices/registry';
 import { clearDonorCache } from '@/lib/donor/cache';
 
 type SessionStatus = 'loading' | 'signed-in' | 'signed-out';
@@ -35,6 +36,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut(): Promise<void> {
+    // Revoke the push token FIRST: /auth/logout deletes the Sanctum token server-side,
+    // so any DELETE after it is answered 401 and the device stays a valid recipient.
+    // Never blocks sign-out: a dead network must not trap the user signed in.
+    try {
+      await revokeDevice();
+    } catch {
+      // ignore
+    }
     const key = newIdempotencyKey();
     try {
       await apiFetch('/auth/logout', {
