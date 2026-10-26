@@ -1,0 +1,51 @@
+# Card 698. Dependabot (free) opens update PRs; CI decides whether they are safe.
+# Pairs with `npm audit` in ci.yml, which only BLOCKS critical advisories in
+# runtime dependencies -- everything below critical arrives here as PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    # Expo and React Native are versioned as one SDK: a major bump of one package
+    # breaks the set, so SDK upgrades go through `npx expo install --fix` by hand.
+    # Only MAJOR updates are ignored -- an `ignore` without update-types would also
+    # silence security PRs for these packages.
+    ignore:
+      - dependency-name: 'expo'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react-native'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-native-*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'react'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+    groups:
+      # SDK packages move together in ONE PR, never one at a time.
+      expo-sdk:
+        patterns: ['expo', 'expo-*', '@expo/*', 'react-native', 'react-native-*', 'react', 'eslint-config-expo']
+        update-types: [minor, patch]
+      npm-minor-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: chore(deps)
+
+  # Actions in ci.yml are pinned to commit SHAs; this keeps them current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Jakarta
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci(deps)

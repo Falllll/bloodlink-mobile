@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # The job id `check` IS the required status check name in the branch ruleset
+  # (see bloodlink/docs/branch-protection.md). Do not add a `name:` key here: the
+  # check would be reported under that name and every PR would wait forever.
+  #
+  # No test step on purpose: this app has no tests yet, and a placeholder test is
+  # a green light that checks nothing. tsc with typed routes plus lint is the gate.
+  check:
+    runs-on: ubuntu-latest
+
+    # Cheapest and most fatal first, same order as the backend CI.
+    steps:
+      # Every action is pinned to a commit SHA with the version in a comment;
+      # Dependabot (github-actions) bumps both.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Secret scan
+        run: >-
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1
+          detect --source=/repo --no-banner --redact --exit-code 1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      # Deliberate threshold: only CRITICAL advisories in RUNTIME dependencies
+      # block a merge. Most RN/Expo advisories sit in Metro and the CLI, which are
+      # shipped as `dependencies` but never reach the app bundle, and npm's
+      # suggested "fix" is often a downgrade to an SDK years old. A gate that is
+      # always red gets switched off; everything below critical arrives as
+      # Dependabot PRs and goes through `npx expo install --fix`.
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=critical
+
+      # experiments.typedRoutes only bites if .expo/types/router.d.ts exists, and
+      # Expo writes it only from a running Metro dev server (both it and
+      # expo-env.d.ts are gitignored). Without this step tsc passes a link to a
+      # route that does not exist. The step FAILS if the types never appear,
+      # so the gate cannot silently lose its teeth.
+      - name: Route types
+        env:
+          EXPO_NO_TELEMETRY: '1'
+        run: |
+          npx expo start --offline > "$RUNNER_TEMP/expo.log" 2>&1 &
+          pid=$!
+          for _ in $(seq 1 300); do
+            [ -f .expo/types/router.d.ts ] && break
+            sleep 1
+          done
+          kill "$pid" 2>/dev/null || true
+          if [ ! -f .expo/types/router.d.ts ]; then
+            cat "$RUNNER_TEMP/expo.log"
+            echo "::error::Typed routes were not generated; tsc would not check routes."
+            exit 1
+          fi
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
