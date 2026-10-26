@@ -21,31 +21,39 @@ export function useDonorProfile(): DonorProfileHandle {
   const [state, setState] = useState<ProfileState>(LOADING);
 
   // The profile holds contact and health data: it stays in memory only, never in cache.ts.
-  const load = useCallback(async (isCurrent: () => boolean) => {
-    setState(LOADING);
-    try {
-      const res = await apiFetch<ApiSuccess<DonorProfile>>('/me/donor');
-      if (!isCurrent()) return;
-      setState({ status: 'ready', profile: res.data, error: null });
-    } catch (e) {
-      if (!isCurrent()) return;
-      if (e instanceof ApiFailure && e.status === 404 && e.body.error.code === 'DONOR_ACCOUNT_NOT_LINKED') {
-        setState({ status: 'not-linked', profile: null, error: null });
-        return;
-      }
-      setState({ status: 'error', profile: null, error: e instanceof Error ? e : new Error(String(e)) });
-    }
-  }, []);
+  // Every setState sits in a promise callback, so the mount effect may call this (the
+  // React Compiler lint flags any local function that sets state in its own body). The
+  // state already starts as LOADING; reload() resets to it explicitly.
+  const fetchProfile = useCallback(
+    (isCurrent: () => boolean) =>
+      apiFetch<ApiSuccess<DonorProfile>>('/me/donor').then(
+        (res) => {
+          if (isCurrent()) setState({ status: 'ready', profile: res.data, error: null });
+        },
+        (e: unknown) => {
+          if (!isCurrent()) return;
+          if (e instanceof ApiFailure && e.status === 404 && e.body.error.code === 'DONOR_ACCOUNT_NOT_LINKED') {
+            setState({ status: 'not-linked', profile: null, error: null });
+            return;
+          }
+          setState({ status: 'error', profile: null, error: e instanceof Error ? e : new Error(String(e)) });
+        },
+      ),
+    [],
+  );
 
   useEffect(() => {
     let current = true;
-    void load(() => current);
+    void fetchProfile(() => current);
     return () => {
       current = false; // unmounted: drop this response
     };
-  }, [load]);
+  }, [fetchProfile]);
 
-  const reload = useCallback(() => load(() => true), [load]);
+  const reload = useCallback(async () => {
+    setState(LOADING);
+    await fetchProfile(() => true);
+  }, [fetchProfile]);
 
   return { ...state, reload };
 }

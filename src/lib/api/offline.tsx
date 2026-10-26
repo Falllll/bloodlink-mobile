@@ -26,9 +26,12 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     signedInRef.current = status === 'signed-in';
   }, [status]);
 
-  const refreshPending = useCallback(async () => {
-    setPending((await listQueue()).length);
-  }, []);
+  // setState inside the .then callback, not after an await in this body: the React
+  // Compiler lint treats any local function that sets state as "setState in an effect".
+  const refreshPending = useCallback(
+    () => listQueue().then((rows) => setPending(rows.length)),
+    [],
+  );
 
   useEffect(() => {
     void refreshPending();

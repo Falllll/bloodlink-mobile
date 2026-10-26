@@ -43,35 +43,44 @@ export function useAppointments(): AppointmentsHandle {
   const generation = useRef(0);
   const busy = useRef(false);
 
-  const loadFirst = useCallback(async (ttlMs?: number) => {
+  // Every setState sits in a promise callback, so the mount effect may call this (the
+  // React Compiler lint flags any local function that sets state in its own body).
+  // status already starts as 'loading'; loadFirst() is the caller-facing variant.
+  const fetchFirst = useCallback((ttlMs?: number) => {
     const mine = ++generation.current;
-    setStatus('loading');
-    try {
-      const res = await fetchWithCache<ApiPaginated<Appointment>>(APPOINTMENTS_PATH, ttlMs);
-      if (mine !== generation.current) return;
-      setRows(res.data.data);
-      setCursor(res.data.meta.next_cursor);
-      setHasMore(res.data.meta.has_more);
-      setFromCache(res.fromCache);
-      setError(null);
-      setStatus('ready');
-    } catch (e) {
-      if (mine !== generation.current) return;
-      if (isNotLinked(e)) {
-        setStatus('not-linked');
-        return;
-      }
-      setError(e instanceof Error ? e : new Error(String(e)));
-      setStatus('error');
-    }
+    return fetchWithCache<ApiPaginated<Appointment>>(APPOINTMENTS_PATH, ttlMs).then(
+      (res) => {
+        if (mine !== generation.current) return;
+        setRows(res.data.data);
+        setCursor(res.data.meta.next_cursor);
+        setHasMore(res.data.meta.has_more);
+        setFromCache(res.fromCache);
+        setError(null);
+        setStatus('ready');
+      },
+      (e: unknown) => {
+        if (mine !== generation.current) return;
+        if (isNotLinked(e)) {
+          setStatus('not-linked');
+          return;
+        }
+        setError(e instanceof Error ? e : new Error(String(e)));
+        setStatus('error');
+      },
+    );
   }, []);
 
+  const loadFirst = useCallback(async (ttlMs?: number) => {
+    setStatus('loading');
+    await fetchFirst(ttlMs);
+  }, [fetchFirst]);
+
   useEffect(() => {
-    void loadFirst();
+    void fetchFirst();
     return () => {
       generation.current++; // unmounted: drop any response still in flight
     };
-  }, [loadFirst]);
+  }, [fetchFirst]);
 
   const refresh = useCallback(async () => {
     setCursor(null);
