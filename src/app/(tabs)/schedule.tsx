@@ -68,26 +68,38 @@ export default function ScheduleScreen(): React.ReactElement {
     (a) => patchRow(a.id, a),
   );
 
-  // A mutation that landed (directly or from the offline queue) is confirmed by reloading
-  // the server list, with the pre-mutation cache dropped so it cannot come back.
-  useEffect(() => {
+  // Local UI state follows a mutation outcome during render ("adjusting state when a
+  // value changes"), not in an effect: no extra render with stale UI. Both mutations
+  // start 'idle', so nothing fires on mount -- same as the effects this replaced.
+  const [seenBookState, setSeenBookState] = useState(book.state);
+  if (book.state !== seenBookState) {
+    setSeenBookState(book.state);
     if (book.state === 'done') {
       setPicked(null);
       setRescheduling(false);
-      void invalidate().finally(() => setPendingBooking(null));
     }
-    if (book.state === 'failed') {
-      setFailure('book');
-      void invalidate();
-    }
-  }, [book.state, invalidate]);
+    if (book.state === 'failed') setFailure('book');
+  }
 
-  useEffect(() => {
-    if (cancel.state === 'done' || cancel.state === 'failed') void invalidate();
+  const [seenCancelState, setSeenCancelState] = useState(cancel.state);
+  if (cancel.state !== seenCancelState) {
+    setSeenCancelState(cancel.state);
     if (cancel.state === 'failed') {
       setFailure('cancel');
       setRescheduling(false);
     }
+  }
+
+  // A mutation that landed (directly or from the offline queue) is confirmed by reloading
+  // the server list, with the pre-mutation cache dropped so it cannot come back. That
+  // network call is a real side effect, so it stays in an effect.
+  useEffect(() => {
+    if (book.state === 'done') void invalidate().finally(() => setPendingBooking(null));
+    if (book.state === 'failed') void invalidate();
+  }, [book.state, invalidate]);
+
+  useEffect(() => {
+    if (cancel.state === 'done' || cancel.state === 'failed') void invalidate();
   }, [cancel.state, invalidate]);
 
   // Invalidate on focus instead of polling: no timers burning battery and data.

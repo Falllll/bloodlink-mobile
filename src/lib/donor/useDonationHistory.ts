@@ -29,31 +29,42 @@ export function useDonationHistory(): DonationHistoryHandle {
   const generation = useRef(0);
   const busy = useRef(false);
 
-  const loadFirst = useCallback(async (ttlMs?: number) => {
+  // Every setState sits in a promise callback, so the mount effect may call this (the
+  // React Compiler lint flags any local function that sets state in its own body).
+  // loading already starts true; loadFirst() is the caller-facing variant that resets it.
+  const fetchFirst = useCallback((ttlMs?: number) => {
     const mine = ++generation.current;
-    setLoading(true);
-    try {
-      const res = await fetchWithCache<ApiPaginated<Donation>>(DONATIONS_PATH, ttlMs);
-      if (mine !== generation.current) return;
-      setRows(res.data.data);
-      setCursor(res.data.meta.next_cursor);
-      setHasMore(res.data.meta.has_more);
-      setFromCache(res.fromCache);
-      setError(null);
-    } catch (e) {
-      if (mine !== generation.current) return;
-      setError(e instanceof Error ? e : new Error(String(e)));
-    } finally {
-      if (mine === generation.current) setLoading(false);
-    }
+    return fetchWithCache<ApiPaginated<Donation>>(DONATIONS_PATH, ttlMs)
+      .then(
+        (res) => {
+          if (mine !== generation.current) return;
+          setRows(res.data.data);
+          setCursor(res.data.meta.next_cursor);
+          setHasMore(res.data.meta.has_more);
+          setFromCache(res.fromCache);
+          setError(null);
+        },
+        (e: unknown) => {
+          if (mine !== generation.current) return;
+          setError(e instanceof Error ? e : new Error(String(e)));
+        },
+      )
+      .finally(() => {
+        if (mine === generation.current) setLoading(false);
+      });
   }, []);
 
+  const loadFirst = useCallback(async (ttlMs?: number) => {
+    setLoading(true);
+    await fetchFirst(ttlMs);
+  }, [fetchFirst]);
+
   useEffect(() => {
-    void loadFirst();
+    void fetchFirst();
     return () => {
       generation.current++; // unmounted: drop any response still in flight
     };
-  }, [loadFirst]);
+  }, [fetchFirst]);
 
   const refresh = useCallback(async () => {
     setRows([]);

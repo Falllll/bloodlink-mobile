@@ -61,32 +61,49 @@ export async function registerCurrentToken(): Promise<boolean> {
   return true;
 }
 
+// Emulators, simulators and Expo Go have no real push token.
+function pushSupported(): boolean {
+  return Notifications !== null && Device.isDevice && devicePlatform() !== null;
+}
+
 export function useDevicePush(): {
   enrollment: PushEnrollment;
   enable: () => Promise<void>;      // called from a button press, never on mount
   refresh: () => Promise<void>;
 } {
-  const [enrollment, setEnrollment] = useState<PushEnrollment>({ state: 'unknown' });
+  // 'unsupported' is known synchronously, so it is the initial state rather than a
+  // setState on mount; the effect below only reads the async permission state.
+  const [enrollment, setEnrollment] = useState<PushEnrollment>(() =>
+    pushSupported() ? { state: 'unknown' } : { state: 'unsupported' },
+  );
 
-  // Reads the current state only; never shows the OS permission prompt.
+  // Reads the current permission state only; never shows the OS permission prompt.
+  // Every setState sits in a promise callback, so the mount effect may call this.
+  const readPermission = useCallback(async () => {
+    const notifications = Notifications;
+    if (notifications === null) return;
+    await notifications.getPermissionsAsync().then(async (permission) => {
+      if (permission.granted) {
+        const registered = (await readDeviceTokenId()) !== null;
+        setEnrollment({ state: 'granted', registered });
+      } else if (permission.status === notifications.PermissionStatus.UNDETERMINED) {
+        setEnrollment({ state: 'unknown' });
+      } else {
+        setEnrollment({ state: 'denied', canAskAgain: permission.canAskAgain });
+      }
+    });
+  }, []);
+
   const refresh = useCallback(async () => {
-    if (Notifications === null || !Device.isDevice || devicePlatform() === null) {
+    if (!pushSupported()) {
       setEnrollment({ state: 'unsupported' });
       return;
     }
-    const permission = await Notifications.getPermissionsAsync();
-    if (permission.granted) {
-      setEnrollment({ state: 'granted', registered: (await readDeviceTokenId()) !== null });
-    } else if (permission.status === Notifications.PermissionStatus.UNDETERMINED) {
-      setEnrollment({ state: 'unknown' });
-    } else {
-      setEnrollment({ state: 'denied', canAskAgain: permission.canAskAgain });
-    }
-  }, []);
+    await readPermission();
+  }, [readPermission]);
 
   const enable = useCallback(async () => {
-    // Emulators, simulators and Expo Go have no real push token.
-    if (Notifications === null || !Device.isDevice || devicePlatform() === null) {
+    if (Notifications === null || !pushSupported()) {
       setEnrollment({ state: 'unsupported' });
       return;
     }
@@ -115,8 +132,8 @@ export function useDevicePush(): {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (pushSupported()) void readPermission();
+  }, [readPermission]);
 
   return { enrollment, enable, refresh };
 }

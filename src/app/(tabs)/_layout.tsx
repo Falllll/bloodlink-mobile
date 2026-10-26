@@ -7,9 +7,11 @@ import { colors, surfaces } from '@/theme/tokens';
 import { fontFamily } from '@/theme/typography';
 
 function tabIcon(name: SymbolViewProps['name']) {
-  return ({ color, size }: { color: ColorValue; size: number }) => (
-    <SymbolView name={name} tintColor={color} size={size} />
-  );
+  // Named, not an anonymous arrow: React DevTools and error stacks show "TabIcon".
+  function TabIcon({ color, size }: { color: ColorValue; size: number }) {
+    return <SymbolView name={name} tintColor={color} size={size} />;
+  }
+  return TabIcon;
 }
 
 export default function TabLayout() {
