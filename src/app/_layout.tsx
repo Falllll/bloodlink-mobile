@@ -27,8 +27,10 @@ function RootNavigator() {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
 
-  // Tapping a notification lands on the home tab; the real destination waits for cards 610/620.
-  useEffect(() => onNotificationTap(() => router.replace('/')), []);
+  // Tapping a notification lands on the invitations tab. Not on /requests/<id>: the FCM
+  // message the backend sends (FcmNotificationSender) carries only title and body, no data
+  // block, so there is no invitation id to route by.
+  useEffect(() => onNotificationTap(() => router.replace('/requests')), []);
 
   if (!ready) return null; // splash is still up — never renders system-font text
 
@@ -37,6 +39,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
         <Stack.Protected guard={status === 'signed-in'}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="requests/[id]" options={{ headerShown: true, title: 'Panggilan donor' }} />
         </Stack.Protected>
         <Stack.Protected guard={status === 'signed-out'}>
           <Stack.Screen name="login" />
