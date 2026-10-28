@@ -2,7 +2,7 @@ export type ErrorCode =
   | 'VALIDATION_FAILED' | 'UNAUTHENTICATED' | 'FORBIDDEN' | 'NOT_FOUND'
   | 'INTERNAL_ERROR' | 'METHOD_NOT_ALLOWED' | 'TOO_MANY_REQUESTS' | 'HTTP_ERROR'
   | 'IDEMPOTENCY_KEY_REQUIRED' | 'IDEMPOTENCY_KEY_REUSED' | 'REQUEST_IN_PROGRESS'
-  | 'DONOR_ACCOUNT_NOT_LINKED';
+  | 'DONOR_ACCOUNT_NOT_LINKED' | 'CAMPAIGN_REJECTED';
 
 export type ApiError = {
   error: { code: ErrorCode; message: string; details: Record<string, unknown>; trace_id: string };
