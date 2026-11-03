@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CategoryPreferences } from '@/components/notifications/CategoryPreferences';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { AppText } from '@/components/ui/Text';
@@ -74,6 +75,8 @@ export default function ProfileScreen(): React.ReactElement {
       {status === 'not-linked' ? null : <HistoryCard history={history} />}
 
       <NotificationCard />
+
+      {status === 'not-linked' ? null : <CategoryPreferences />}
 
       <Button label="Keluar" variant="destructive" onPress={handleSignOut} loading={leaving} />
     </ScrollView>
