@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <defs>
+    <linearGradient id="g" x1="28" y1="8" x2="74" y2="92" gradientUnits="userSpaceOnUse">
+      <stop offset="0"   stop-color="#FF6274"/>
+      <stop offset="0.45" stop-color="#E8394B"/>
+      <stop offset="1"   stop-color="#A81B2C"/>
+    </linearGradient>
+    <mask id="cut">
+      <rect width="100" height="100" fill="#fff"/>
+      <g fill="none" stroke="#000" stroke-width="6.2" stroke-linecap="round"
+         transform="translate(50 62) rotate(-45)">
+        <rect x="-21" y="-8.6" width="27" height="17.2" rx="8.6"/>
+        <rect x="-6"  y="-8.6" width="27" height="17.2" rx="8.6"/>
+      </g>
+    </mask>
+  </defs>
+  <path d="M50 5 C50 5 79.5 40.5 79.5 62 A29.5 29.5 0 1 1 20.5 62 C20.5 40.5 50 5 50 5 Z"
+        fill="url(#g)" mask="url(#cut)"/>
+</svg>

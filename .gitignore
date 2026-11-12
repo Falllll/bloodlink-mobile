@@ -31,8 +31,10 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
-.env
+# .env* and not just .env + .env*.local: the Expo template blocks neither
+# .env.production nor .env.staging, and the first one of those to be created
+# with a real API host in it would be committable.
+.env*
 !.env.example
 
 # typescript
